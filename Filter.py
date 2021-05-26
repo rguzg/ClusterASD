@@ -13,22 +13,17 @@ def CreatePath(name):
 
 def ImageFilter(path):
 
-    # path of the folder containing the raw images
-    inPath = path
+    for imagePath in os.listdir(path):
 
-    # path of the folder that will contain the modified image
-
-    outPath = rf"{path}/Filtros/"
-
-    for imagePath in os.listdir(inPath):
-
-        inputPath = os.path.join(inPath, imagePath)
+        inputPath = os.path.join(path, imagePath)
         simg = Image.open(inputPath)
 
-        fullOutPath = os.path.join(outPath, imagePath)
+        fullOutPath = os.path.join(path, imagePath)
         # fullOutPath contains the path of the output
         # image that needs to be generated
         simg.rotate(90).filter(ModeFilter(size=9)).save(fullOutPath)
         
         simg.close()
-        print(fullOutPath)
+        print(f"Filtrada: {fullOutPath}", end = "\r")
+    
+    print('')
