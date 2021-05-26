@@ -1,7 +1,9 @@
 import socket
 import json
 import os
+import pickle
 from Filter import ImageFilter
+from ImagenesCompartidas import ImagenesCompartidas
 
 class Processing_Server():
     def __init__(self, address: str, port: int, broker_port: int = 2000, max_attempts: int = 3) -> None:
@@ -32,7 +34,6 @@ class Processing_Server():
             decoded_json = b""
             extra_data = b""
             extra_data_size = 0
-            processed_images = 0
 
             while True:
                 buffer = conn.recv(1024)
@@ -43,7 +44,6 @@ class Processing_Server():
                     decoded_json = json.loads(buffer)
 
                     continue_listening = True if decoded_json['message'] == 'CONTINUE' else False
-                    self.current_images = decoded_json['images']
 
                     if(continue_listening):
                         conn.send(b'1')
@@ -61,46 +61,27 @@ class Processing_Server():
                             extra_data_size -= recieved_bytes
                         # El protocolo debe avisar cuando haya terminado de leer el archivo enviado
                         # para que el broker mande la siguiente imagen
-                        if(extra_data_size <= 0):
-                            img_procesar = open(f'PROCESAR_{self.port}/IMG_{processed_images}.jpg', 'wb')
-                            img_procesar.write(extra_data)
-                            
-                            extra_data = b''
-                            extra_data_size = 0
-
+                        if(extra_data_size <= 0):                            
                             conn.send(b'1')
-                            processed_images += 1
-                        # El protocolo debe avisar cuando haya terminado de leer todas las imagenes
-                        # para que el broker espere la respuesta
-                        if(processed_images == self.current_images):
-                            conn.send(b'2')
                             break
 
             if(isinstance(decoded_json, dict)):
-                self.manejar_imagenes(conn)
+                image_structure = pickle.loads(extra_data)
+                self.manejar_imagenes(image_structure)
 
-                # Indicar al broker que ya se terminaron de procesar las imagenes y que se va a proceder a enviarlas
-                conn.send(json.dumps({"type": "PROCESSING_COMPLETE", "message":"CONTINUE", "IMAGES": self.current_images}).encode('ASCII'))
+                return_structure = pickle.dumps(ImagenesCompartidas(image_structure.img_range, str(self.port)))
 
-                # Esperar a que el servidor broker indique que está listo para recibir las imagenes
-                should_continue = conn.recv(1024)
+                conn.send(return_structure)
 
-                if(should_continue):
-                    for item in os.listdir(f'PROCESAR_{self.port}/Filtros/'):
-                        if(os.path.isfile(f"PROCESAR_{self.port}/Filtros/{item}")):
-                            filesize = os.path.getsize(f'PROCESAR_{self.port}/Filtros/{item}')
-                            conn.send(filesize.to_bytes(8, 'little'))
-
-                            should_send = conn.recv(1024)
-
-                            if(should_send):
-                                for byte in open(item, 'rb'):
-                                    conn.send(byte)
                 conn.close()
         
-    def manejar_imagenes(self, socket: socket.socket):
-        for i in range(self.current_images):
-            ImageFilter(f'PROCESAR_{self.port}')
+    def manejar_imagenes(self, image_structure: ImagenesCompartidas):
+        for i in range(len(image_structure.imagenes)):
+            image = open(f'{self.port}/{i+1}.jpg', 'wb')
+            image.write(image_structure.imagenes[i])
+            image.close()
+
+        ImageFilter(str(self.port))
 
     def searchBroker(self) -> bool:
         print(f"Buscando servidor broker @ localhost:{self.broker_port}")
