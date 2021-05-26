@@ -1,6 +1,6 @@
 import socket
 import json
-import os
+import sys
 import pickle
 from Filter import ImageFilter
 from ImagenesCompartidas import ImagenesCompartidas
@@ -121,7 +121,14 @@ class Processing_Server():
         self.socket_server.close()
 
 if __name__ == '__main__':
-    s = Processing_Server('localhost', 9560)
+    port = 0
+
+    try:
+        port = int(sys.argv[1])
+    except:
+        print("El número de puerto no es válido")
+
+    s = Processing_Server('localhost', port)
     
     if(s.searchBroker()):
         print("Conectado al servidor broker")
