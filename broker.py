@@ -1,15 +1,18 @@
-from json import loads, dumps, dump
+from Video import CreateVideo
+from json import loads, dumps
 from names.words import GetName
-from typing import Optional
+from typing import List, Optional
+from ImagenesCompartidas  import ImagenesCompartidas
 
 import socket
 import Images
-import os
 import math
+import multiprocessing
+import pickle
 
 class Broker:
     def __init__(self, hostname: str, port: int) -> None:
-        self.servidores_procesamiento = [1000, 2000, 3000]
+        self.servidores_procesamiento = []
 
         self.socket = socket.socket()
         self.hostname = hostname
@@ -107,29 +110,109 @@ class Broker:
         video_file = open(f'Videos/{video_name}.mp4', 'wb')
         video_file.write(video)
 
-        Images.VideoToImage(f'Videos/{video_name}.mp4', video_name)
+        frames = Images.VideoToImage(f'Videos/{video_name}.mp4', video_name) - 1
 
-        frames = []
+        images_to_share = math.floor(frames / len(self))
+        shared_images_counter = 0
 
-        for item in os.listdir(f'Images{video_name}/'):
-            if(os.path.isfile(f"Images{video_name}/{item}")):
-                frames.append(item)
+        shared_images = []
+        result_images = []
 
-        images_to_share = math.floor(len(frames) / len(self)) + 1
-        shared_images = 0
+        process_pool = multiprocessing.Pool(len(self))
+        processes = []
+
+        available_servers = multiprocessing.Queue(len(self))
+
+        for server in self.servidores_procesamiento:
+            available_servers.put(server)
 
         for i in range(len(self)):
-            if(i != len(self) - 1):
-                print(f"Enviando al servidor {i} para que procese imagenes del {shared_images + 1} a {shared_images + images_to_share}")
-                shared_images += images_to_share
+            if(i == len(self) - 1):
+                shared_images_struct = ImagenesCompartidas([shared_images_counter + 1, frames], f'Images{video_name}')
             else:
-                print(f"Enviando al servidor {i} para que procese imagenes del {shared_images + 1} a {len(frames) - 1}")
+                shared_images_struct = ImagenesCompartidas([shared_images_counter + 1, shared_images_counter + images_to_share], f'Images{video_name}')
+
+            shared_images.append(shared_images_struct)
+
+            shared_images_counter += images_to_share
+
+        for struct in shared_images:
+            servidor_asignado = available_servers.get()
+            process = process_pool.apply_async(self.EnviarAProcesar, (struct, servidor_asignado))
+            processes.append(process)
+
+        for process in processes:
+            try:
+                result_structure = process.get(1000)
+
+                if(not result_structure):
+                   raise Exception('Los servidores no pudieron terminar de procesar las imagenes')
+
+                if(isinstance(result_structure, ImagenesCompartidas)):
+                    result_images.append(result_structure)
+                else:
+                   raise Exception('Los servidores no pudieron terminar de procesar las imagenes')
+            except Exception as e:
+                self.servidores_procesamiento.remove(e.args[0])
+                print(f"El servidor {e} no está disponible")
+
+                socket.send(b'{"type": "END_ERROR", "message": ""}')
+                return
+
+        for result in result_images:
+            for i in range(len(result.imagenes)):
+                image = open(f'Images{video_name}/{i + 1}.jpg', 'wb')
+                image.write(result.imagenes[i])
+                image.close()
+
+        CreateVideo(f'Images{video_name}')
 
         socket.send(b'{"type": "VIDEO_COMPLETE"}')
                 
+    def EnviarAProcesar(self, imagenes_compartidas: ImagenesCompartidas, puerto_servidor: int):
+        print(f"Enviando al servidor {puerto_servidor} para que procese imagenes del {imagenes_compartidas.img_range[0]} a {imagenes_compartidas.img_range[1]}")
+
+        pickled_structure = pickle.dumps(imagenes_compartidas)
+        client_socket = socket.socket()
+
+        try:
+            client_socket.connect(('localhost', puerto_servidor))
+        except ConnectionRefusedError:
+            raise ConnectionRefusedError(puerto_servidor)
+
+        client_socket.send(b'{"type": "PROCESS", "message":"CONTINUE"}')
+        should_continue = client_socket.recv(1024)
+
+        if(should_continue):
+            # Según el protocolo, antes de enviar pickled_structure, se debe de enviar que tan largo es pickled_structure
+            client_socket.send(len(pickled_structure).to_bytes(8, 'little'))
+
+            should_send = client_socket.recv(1024)
+
+            if(should_send):
+                    client_socket.send(pickled_structure)
+
+                    # El servidor avisará cuando se deba de empezar a esperar la respuesta
+                    should_continue = client_socket.recv(1024)
+
+                    if(should_continue):
+                        result_pickled_struct = b''
+
+                        while True:
+                            buffer = client_socket.recv(1024)
+
+                            if not buffer:
+                                break
+                            else:
+                                result_pickled_struct += buffer
+
+                        return pickle.loads(result_pickled_struct)
+
+        raise Exception(puerto_servidor, "El servidor no está listo para recibir. Intentalo de nuevo más tarde")
+        
+
     def __len__(self):
         return len(self.servidores_procesamiento)
-
 
 if __name__ == '__main__':
     b = Broker("localhost", 2000)
