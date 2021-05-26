@@ -44,3 +44,5 @@ def VideoToImage(path,names):
     
     cam.release()
     cv2.destroyAllWindows()
+
+    return currentframe
