@@ -2,6 +2,9 @@ import socket
 import json
 import sys
 import pickle
+import pathlib
+import os
+
 from Filter import ImageFilter
 from ImagenesCompartidas import ImagenesCompartidas
 
@@ -17,6 +20,9 @@ class Processing_Server():
 
         if(self.port == self.broker_port):
             raise ValueError("El puerto asignado al servidor de procesamiento no puede ser el mismo que el del servidor broker")
+
+        if(not pathlib.Path(str(port)).exists()):
+            os.mkdir(str(port))
 
     def listen(self) -> None:
         self.socket_server.bind((self.address, self.port))
