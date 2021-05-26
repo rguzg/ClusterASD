@@ -20,12 +20,11 @@ def CreateVideo(name):
 
  
      # Arguments
-    dir_path = r'C:\Users\emili\Desktop\ClusterASD\Images\ImgFiltros/'+name+"Filtros"
     ext = 'jpg'
     output = name+"video.mp4"
 
     images = []
-    for f in os.listdir(dir_path):
+    for f in os.listdir(name):
         print(f)
         if f.endswith(ext):
             images.append(f)
@@ -35,7 +34,7 @@ def CreateVideo(name):
         images = sorted(images, key=cmp_to_key(image_sort))
 
     # Determine the width and height from the first image
-    image_path = os.path.join(dir_path, images[0])
+    image_path = os.path.join(name, images[0])
     frame = cv2.imread(image_path)
     cv2.imshow('video',frame)
     height, width, channels = frame.shape
@@ -46,7 +45,7 @@ def CreateVideo(name):
 
     for image in images:
 
-        image_path = os.path.join(dir_path, image)
+        image_path = os.path.join(name, image)
         frame = cv2.imread(image_path)
 
         out.write(frame) # Write out frame to video
@@ -61,4 +60,4 @@ def CreateVideo(name):
 
     print("The output video is {}".format(output))
 
-    os.replace(r"C:\Users\emili/"+output,r"C:\Users\emili\Desktop\ClusterASD\Videos/"+output)
+    # os.replace(r"C:\Users\emili/"+output,r"C:\Users\emili\Desktop\ClusterASD\Videos/"+output)
