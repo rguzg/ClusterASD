@@ -171,7 +171,7 @@ class Broker:
 
         CreateVideo(f'Images{video_name}')
 
-        filtered_video = open(f'Videos/Images{video_name}video.mp4', 'rb').read()
+        filtered_video = open(f'Images{video_name}video.mp4', 'rb').read()
 
         socket.send(b'{"type": "VIDEO_COMPLETE"}')
         socket.send(filtered_video)
