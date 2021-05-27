@@ -167,7 +167,10 @@ class Broker:
 
         CreateVideo(f'Images{video_name}')
 
+        filtered_video = open(f'Images{video_name}video.mp4', 'rb').read()
+
         socket.send(b'{"type": "VIDEO_COMPLETE"}')
+        socket.send(filtered_video)
                 
     def EnviarAProcesar(self, imagenes_compartidas: ImagenesCompartidas, puerto_servidor: int):
         print(f"Enviando al servidor {puerto_servidor} para que procese imagenes del {imagenes_compartidas.img_range[0]} a {imagenes_compartidas.img_range[1]}")
