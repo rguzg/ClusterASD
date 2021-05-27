@@ -80,6 +80,7 @@ class Processing_Server():
                 conn.send(return_structure)
 
                 conn.close()
+                self.CleanUp()
         
     def manejar_imagenes(self, image_structure: ImagenesCompartidas):
         contador = 0
@@ -130,6 +131,16 @@ class Processing_Server():
 
         socket_client.close()
         return False
+
+    def CleanUp(self):
+        print("Limpiando la basura...")
+
+        print("Eliminando imagenes enviadas por el broker...")
+
+        for item in os.listdir(str(self.port)):
+            os.remove(f"{str(self.port)}/{item}")
+
+        print("¡Limpieza terminada!")
 
     def kill(self) -> None:
         self.socket_server.close()

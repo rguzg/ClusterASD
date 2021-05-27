@@ -9,6 +9,8 @@ import Images
 import math
 import multiprocessing
 import pickle
+import shutil
+import os
 
 class Broker:
     def __init__(self, hostname: str, port: int) -> None:
@@ -175,6 +177,8 @@ class Broker:
 
         socket.send(b'{"type": "VIDEO_COMPLETE"}')
         socket.send(filtered_video)
+
+        self.CleanUp(video_name)
                 
     def EnviarAProcesar(self, imagenes_compartidas: ImagenesCompartidas, puerto_servidor: int):
         print(f"Enviando al servidor {puerto_servidor} para que procese imagenes del {imagenes_compartidas.img_range[0]} a {imagenes_compartidas.img_range[1]}")
@@ -217,6 +221,16 @@ class Broker:
 
         raise Exception(puerto_servidor, "El servidor no está listo para recibir. Intentalo de nuevo más tarde")
         
+    def CleanUp(self, video_name: str):
+        print("Limpiando la basura...")
+
+        print("Eliminando imagenes del video original...")
+        shutil.rmtree(f'Images{video_name}', onerror = lambda _,__, info: print(info))
+
+        print("Eliminando video resultado...")
+        os.remove(f'Images{video_name}video.mp4')
+
+        print("¡Limpieza terminada!")
 
     def __len__(self):
         return len(self.servidores_procesamiento)
