@@ -160,14 +160,18 @@ class Broker:
                 return
 
         for result in result_images:
-            for i in range(len(result.imagenes)):
+            contador = 0
+            for i in range(result.img_range[0], result.img_range[1] + 1):
+
                 image = open(f'Images{video_name}/{i + 1}.jpg', 'wb')
-                image.write(result.imagenes[i])
+                image.write(result.imagenes[contador])
                 image.close()
+
+                contador += 1
 
         CreateVideo(f'Images{video_name}')
 
-        filtered_video = open(f'Images{video_name}video.mp4', 'rb').read()
+        filtered_video = open(f'Videos/Images{video_name}video.mp4', 'rb').read()
 
         socket.send(b'{"type": "VIDEO_COMPLETE"}')
         socket.send(filtered_video)
