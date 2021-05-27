@@ -49,7 +49,22 @@ def main(address: str, port: int):
             if(response['type'] == "END_ERROR"):
                 print(f"El servidor cerró la conexión porque ocurrió un error: {response['message']}")
             if(response['type'] == 'VIDEO_COMPLETE'):
-                print(f"El video se terminó de procesar :)")
+                print(f"El video se terminó de procesar")
+
+                video = b''
+
+                while True:
+                    buffer = s.recv(1024)
+
+                    if not buffer:
+                        break
+                    else:
+                        video += buffer
+
+                saved_video = open('resultado.mp4', 'wb')
+                saved_video.write(video)
+
+                print("Video guardado como resultado.mp4")
             
     else:
         s.close()
