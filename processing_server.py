@@ -82,11 +82,19 @@ class Processing_Server():
                 conn.close()
         
     def manejar_imagenes(self, image_structure: ImagenesCompartidas):
-        for i in range(len(image_structure.imagenes)):
-            image = open(f'{self.port}/{i+1}.jpg', 'wb')
-            image.write(image_structure.imagenes[i])
+        contador = 0
+        for i in range(image_structure.img_range[0], image_structure.img_range[1] + 1):
+
+            image = open(f'{self.port}/{i}.jpg', 'wb')
+            image.write(image_structure.imagenes[contador])
             image.close()
 
+            print("                         ", end = "\r")
+            print(f"Se escribió /{i+1}.jpg", end = "\r")
+
+            contador += 1
+        
+        print("")
         ImageFilter(str(self.port))
 
     def searchBroker(self) -> bool:
